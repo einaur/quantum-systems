@@ -112,6 +112,7 @@ def construct_pyscf_system_rhf(
     verbose=False,
     charge=0,
     cart=False,
+    dip=None,
     **kwargs,
 ):
     """Convenience function setting up a closed-shell atom or a molecule from
@@ -134,7 +135,8 @@ def construct_pyscf_system_rhf(
         Default is ``True``.
     np : module
         Array- and linear algebra module.
-
+    dip : list
+        [position, momentum] f.ex. from Dalton
     Returns
     -------
     SpatialOrbitalSystem, GeneralOrbitalSystem
@@ -208,6 +210,15 @@ def construct_pyscf_system_rhf(
     u = mol.intor("int2e").reshape(l, l, l, l).transpose(0, 2, 1, 3)
     position = mol.intor("int1e_r").reshape(3, l, l)
 
+    if dip is not None:
+        diplen = dip[0]
+        arr_eq0 = np.allclose(diplen[0],position[0])
+        arr_eq1 = np.allclose(diplen[1],position[1])
+        arr_eq2 = np.allclose(diplen[2],position[2])
+        if not (arr_eq0 and arr_eq1 and arr_eq2):
+            print ('WARNING:')
+            print ('dipole_array_pyscf != dipole_array_dalton')
+
     bs = BasisSet(l, dim=3, np=np)
     bs.h = h
     bs.s = s
@@ -215,6 +226,8 @@ def construct_pyscf_system_rhf(
     bs.nuclear_repulsion_energy = nuclear_repulsion_energy
     bs.particle_charge = -1
     bs.position = position
+    if dip is not None:
+        bs.momentum = dip[1]
     bs.change_module(np=np)
 
     system = SpatialOrbitalSystem(n, bs)
