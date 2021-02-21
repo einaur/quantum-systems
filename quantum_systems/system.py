@@ -100,6 +100,11 @@ class QuantumSystem(metaclass=abc.ABCMeta):
         return self._basis_set.s
 
     @property
+    def momentum(self):
+        """Getter returning the momentum matrix."""
+        return self._basis_set.momentum
+
+    @property
     def position(self):
         """Getter retuning the position matrix."""
         return self._basis_set.position
