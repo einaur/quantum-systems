@@ -141,6 +141,56 @@ class DipoleFieldInteraction(TimeEvolutionOperator):
         )
 
 
+
+class DipoleFieldInteractionVelocity(TimeEvolutionOperator):
+    r"""Same as DipoleFieldInteraction, but in  velocity gauge
+    square_term: bool, include
+    Note: electric_field_strength is A, not E 
+    """
+
+    def __init__(self, electric_field_strength, polarization_vector=None, square_term=False):
+        self._electric_field_strength = electric_field_strength
+        self._polarization = polarization_vector
+        self._square_term = square_term
+
+    @property
+    def is_one_body_operator(self):
+        return True
+
+    def h_t(self, current_time):
+        np = self._system.np
+
+        if not callable(self._electric_field_strength):
+            tmp = self._electric_field_strength
+            self._electric_field_strength = lambda t: tmp
+
+        if self._polarization is None:
+            # Set default polarization along x-axis
+            self._polarization = np.zeros(self._system.dipole_moment.shape[0])
+            self._polarization[0] = 1
+
+        if not callable(self._polarization):
+            tmp = self._polarization
+            self._polarization = lambda t: tmp
+        
+        if self._square_term:
+            a2 = 0.5*self._electric_field_strength**2*np.eye(len(self._system.dipole_moment))
+        else:
+            a2 = 0
+
+        return self._system.h + a2 + self._electric_field_strength(
+            current_time
+        ) * np.tensordot(
+            self._polarization(current_time),
+            self._system.momentum,
+            axes=(0, 0),
+        )
+
+
+
+
+
+
 class AdiabaticSwitching(TimeEvolutionOperator):
     def __init__(self, switching_function):
         self._switching_function = switching_function
