@@ -186,8 +186,105 @@ class DipoleFieldInteractionVelocity(TimeEvolutionOperator):
             axes=(0, 0),
         )
 
+class DipoleFieldInteractionPlane(TimeEvolutionOperator):
+    r"""Same as DipoleFieldInteraction, but in  velocity gauge
+    and plane wave laser.
+    Note: electric_field_strength is A, not E 
+    """
+
+    def __init__(self, electric_field_strength, cosp, sinp, cos2, sin2, polarization_vector=None, square_term=False):
+        self._electric_field_strength = electric_field_strength
+        self._polarization = polarization_vector
+        self._cosp = cosp
+        self._sinp = sinp
+        self._cos2 = cos2
+        self._sin2 = sin2
+        self._N = len(cos2)
+
+    @property
+    def is_one_body_operator(self):
+        return True
+
+    def h_t(self, current_time):
+        np = self._system.np
+
+        if not callable(self._electric_field_strength):
+            tmp = self._electric_field_strength
+            self._electric_field_strength = lambda t: tmp
+
+        if self._polarization is None:
+            # Set default polarization along x-axis
+            self._polarization = np.zeros(self._system.dipole_moment.shape[0])
+            self._polarization[0] = 1
+
+        if not callable(self._polarization):
+            tmp = self._polarization
+            self._polarization = lambda t: tmp
+       
+        N = self._N 
+        laser_cos, laser_sin = self._electric_field_strength(current_time)
+        return ( self._system.h + laser_cos * np.tensordot(self._polarization(current_time),self._cosp,axes=(0, 0),)
+                                + laser_sin * np.tensordot(self._polarization(current_time),self._sinp,axes=(0, 0),)
+                                + 1/4.*( (self._cos2 + np.eye(N))*laser_cos**2 + (-self._cos2 + np.eye(N))*laser_sin**2  
+                                + self._sin2*laser_cos*laser_sin) )
 
 
+class DipoleFieldInteractionVecpot(TimeEvolutionOperator):
+    r"""Same as DipoleFieldInteraction, but in vector potential
+    integrals in velocity gauge
+    square_term: bool, include
+    Note: electric_field_strength is A, not E 
+    """
+
+    def __init__(self, 
+                 electric_field_strength_cos,
+                 electric_field_strength_sin,
+                 cosp,
+                 sinp,
+                 polarization_vector=None, square_term=False):
+        self._electric_field_strength_cos = electric_field_strength_cos
+        self._electric_field_strength_sin = electric_field_strength_sin
+        self._cosp = cosp
+        self._sinp = sinp
+        self._polarization = polarization_vector
+        self._square_term = square_term
+
+    @property
+    def is_one_body_operator(self):
+        return True
+
+    def h_t(self, current_time):
+        np = self._system.np
+
+        #if not callable(self._electric_field_strength):
+        #    tmp = self._electric_field_strength
+        #    self._electric_field_strength = lambda t: tmp
+
+        if self._polarization is None:
+            # Set default polarization along x-axis
+            self._polarization = np.zeros(self._system.dipole_moment.shape[0])
+            self._polarization[0] = 1
+
+        if not callable(self._polarization):
+            tmp = self._polarization
+            self._polarization = lambda t: tmp
+        
+        #if self._square_term:
+        #    a2 = 0.5*self._electric_field_strength**2*np.eye(len(self._system.dipole_moment))
+        #else:
+        #    a2 = 0
+
+        return self._system.h + self._electric_field_strength_cos(
+            current_time
+        ) * np.tensordot(
+            self._polarization(current_time),
+            self._cosp,
+            axes=(0, 0),) + self._electric_field_strength_sin(
+            current_time
+        ) * np.tensordot(
+            self._polarization(current_time),
+            self._sinp,
+            axes=(0,0),)
 
 
 
