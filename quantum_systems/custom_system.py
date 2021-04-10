@@ -209,6 +209,7 @@ def construct_pyscf_system_rhf(
     s = mol.intor_symmetric("int1e_ovlp")
     u = mol.intor("int2e").reshape(l, l, l, l).transpose(0, 2, 1, 3)
     position = mol.intor("int1e_r").reshape(3, l, l)
+    momentum = -1j*mol.intor("int1e_ipovlp").reshape(3,l,l)
 
     if dip is not None:
         diplen = dip[0]
@@ -226,6 +227,7 @@ def construct_pyscf_system_rhf(
     bs.nuclear_repulsion_energy = nuclear_repulsion_energy
     bs.particle_charge = -1
     bs.position = position
+    bs.momentum = momentum
     if dip is not None:
         bs.momentum = dip[1]
     bs.change_module(np=np)
